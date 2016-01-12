@@ -5,6 +5,7 @@
     "babel-plugin-transform-async-to-generator": "^6.4.0",
     "babel-plugin-transform-es2015-destructuring": "^6.4.0",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.4.0",
+    "babel-plugin-transform-object-rest-spread": "^6.3.13",
     "babel-register": "^6.3.13",
     "dockerode": "^2.2.8",
     "koa": "^2.0.0-alpha.3",

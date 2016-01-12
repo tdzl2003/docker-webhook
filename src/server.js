@@ -11,14 +11,14 @@ import * as fs from 'fs';
 const docker = new Docker();
 
 // compute info
-const dockerConfig = [
-  'DOCKER_HOST='+process.env.DOCKER_HOST,
-];
+const dockerConfig = {
+  'DOCKER_HOST': process.env.DOCKER_HOST,
+};
 const extraCreateConfig = {};
 const extraRunConfig = {};
 if (process.env.DOCKER_TLS_VERIFY && process.env.DOCKER_TLS_VERIFY > 0){
-  dockerConfig.push('DOCKER_TLS_VERIFY=1');
-  dockerConfig.push('DOCKER_CERT_PATH=/cert')
+  dockerConfig.DOCKER_TLS_VERIFY = 1;
+  dockerConfig.DOCKER_CERT_PATH = '/cert';
   extraCreateConfig.Volumes = {};
   extraCreateConfig.Volumes['/cert'] = {};
   extraRunConfig.Binds = [process.env.DOCKER_CERT_PATH + ':/cert'];
@@ -27,18 +27,22 @@ if (process.env.DOCKER_TLS_VERIFY && process.env.DOCKER_TLS_VERIFY > 0){
 
 const buildConfig = {
   "test": {
-    "env": [
-      'TAG=reactnativecn',
-      'VERSION=test',
-      'REPO=https://github.com/reactnativecn/react-native.cn.git',
-      'BRANCH=master',
-    ]
+    "env": {
+      'TAG': 'reactnativecn',
+      'VERSION': 'test',
+      'REPO': 'https://github.com/reactnativecn/react-native.cn.git',
+      'BRANCH': 'master',
+    }
   }
 };
 
 let building = false;
 const pendingBuild = [];
 const pendingBuildMap = {};
+
+function translateEnv(obj){
+  return Object.keys(obj).map(k=>k+'='+obj[k]);
+}
 
 async function startBuild(name) {
   if (building){
@@ -53,7 +57,7 @@ async function startBuild(name) {
   // Invoke build process.
   await new Promise(resolve=> {
     docker.run('build', undefined, process.stdout, {
-      Env: [...buildConfig[name].env, ...dockerConfig],
+      Env: translateEnv({...buildConfig[name].env, ...dockerConfig}),
       ...extraCreateConfig
     }, extraRunConfig, function (err, data, container) {
       if (err){
