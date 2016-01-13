@@ -88,9 +88,9 @@ const buildConfig = {
         },
       }, {
         PortBindings: {
-          '3000/tcp' : {
+          '3000/tcp' : [{
             HostPort: '3002'
-          }
+          }],
         },
       });
       await restartService('reactnativecn-2', {
@@ -100,9 +100,9 @@ const buildConfig = {
         },
       }, {
         PortBindings: {
-          '3000/tcp' : {
+          '3000/tcp' : [{
             HostPort: '3003'
-          }
+          }]
         },
       });
     }
