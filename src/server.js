@@ -106,6 +106,40 @@ const buildConfig = {
         },
       });
     }
+  },
+  "docs": {
+    "env": {
+      'TAG': 'reactnativedocscn',
+      'VERSION': 'latest',
+      'REPO': 'https://github.com/reactnativecn/react-native-docs-cn.git',
+      'BRANCH': 'stable',
+    },
+    "postBuild": async ()=>{
+      await restartService('reactnativedocscn-1', {
+        Image: 'reactnativedocscn',
+        ExposedPorts: {
+          '80/tcp' : {}
+        },
+      }, {
+        PortBindings: {
+          '80/tcp' : [{
+            HostPort: '8001'
+          }],
+        },
+      });
+      await restartService('reactnativedocscn-2', {
+        Image: 'reactnativedocscn',
+        ExposedPorts: {
+          '80/tcp' : {}
+        },
+      }, {
+        PortBindings: {
+          '80/tcp' : [{
+            HostPort: '8002'
+          }]
+        },
+      });
+    }
   }
 };
 
