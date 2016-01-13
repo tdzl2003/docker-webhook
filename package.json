@@ -8,6 +8,7 @@
     "babel-plugin-transform-object-rest-spread": "^6.3.13",
     "babel-register": "^6.3.13",
     "dockerode": "^2.2.8",
+    "es6-promisify": "^3.0.0",
     "koa": "^2.0.0-alpha.3",
     "koa-bodyparser": "^3.0.0",
     "koa-router": "^7.0.0"

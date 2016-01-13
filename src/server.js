@@ -24,6 +24,35 @@ if (process.env.DOCKER_TLS_VERIFY && process.env.DOCKER_TLS_VERIFY > 0){
   extraRunConfig.Binds = [process.env.DOCKER_CERT_PATH + ':/cert'];
 }
 
+function asyncFn(func){
+  return new Promise((resolve, reject)=>{
+    func((err, data)=>{
+      err ? reject(err) : resolve(data);
+    })
+  })
+}
+
+async function restartService(name, createConfigure, startConfigure){
+  console.log('Stopping: ' + name);
+  const container = docker.getContainer(name);
+  if (container) {
+    await new Promise(cb=>container.kill(cb));
+    await new Promise(cb=>container.remove(cb));
+  }
+
+  console.log('Starting: ' + name);
+  const newcontainer = await asyncFn(cb=>docker.createContainer({
+    name: name,
+    ...createConfigure
+  }, cb));
+
+  //await asyncFn(cb=>newcontainer.rename({
+  //  name: name,
+  //}, cb));
+
+  await asyncFn(cb=>newcontainer.start(extraRunConfig, cb));
+  console.log("Start completed.");
+}
 
 const buildConfig = {
   "test": {
@@ -32,6 +61,20 @@ const buildConfig = {
       'VERSION': 'test',
       'REPO': 'https://github.com/reactnativecn/react-native.cn.git',
       'BRANCH': 'master',
+    },
+    "postBuild": async ()=>{
+      await restartService('reactnativecn-test', {
+        Image: 'reactnativecn:test',
+        ExposedPorts: {
+          '3000/tcp' : {}
+        },
+      }, {
+        PortBindings: {
+          '3000/tcp' : {
+            HostPort: '3001'
+          }
+        },
+      });
     }
   }
 };
@@ -54,60 +97,162 @@ async function startBuild(name) {
   }
   building = true;
 
-  // Invoke build process.
-  await new Promise(resolve=> {
-    docker.run('build', undefined, process.stdout, {
+  let container;
+  try{
+    // Create build container
+    container = await asyncFn(cb=>docker.createContainer({
+      name: 'build-' + name + '-' + Date.now(),
+      Image: 'build',
       Env: translateEnv({...buildConfig[name].env, ...dockerConfig}),
       ...extraCreateConfig
-    }, extraRunConfig, function (err, data, container) {
-      if (err){
-        console.error(err);
-      }
-      container && container.remove(()=> {
-      });
-      resolve();
+    }, cb));
+
+    const stream = await asyncFn(cb=>container.attach({
+      stream:true,
+      stdout:true,
+      stderr:true
+    }, cb));
+
+    stream.setEncoding('utf8');
+    stream.pipe(process.stdout, {
+      end: true
     });
-  });
 
-  // Restart all containers.
+    // Start
+    console.log("Build start");
+    await asyncFn(cb=>container.start(extraRunConfig, cb));
 
-  building = false;
-  if (pendingBuild.length){
-    const next = pendingBuild.shift();
-    delete pendingBuildMap[next];
-    startBuild(next);
+    // Wait for complete
+    const result = await asyncFn(cb=>container.wait(cb));
+
+    console.log("Running post build");
+    await buildConfig[name].postBuild();
+    console.log("Build completed");
+    console.log(result);
+  } catch (e){
+    console.error("Build failed.");
+    console.error(e.stack || e);
+  } finally {
+    if (container){
+      container.remove(()=>{}); // Do not wait for this.
+    }
+    building = false;
+    if (pendingBuild.length){
+      const next = pendingBuild.shift();
+      delete pendingBuildMap[next];
+      startBuild(next);
+    }
   }
 }
 
-startBuild('test');
+async function clearExpired(){
+  const usage = {};
 
-//const app = new Koa();
-//
-//app.use((ctx, next) => {
-//  return next()
-//    .catch(err => {
-//      ctx.body = {
-//        message: err.message,
-//      };
-//      ctx.status = err.status;
-//    });
-//});
-//
-//app.use(bodyParser());
-//
-//const router = new Router();
-//
-//router.post('/reactnativecn', async function(){
-//  docker.run('build', undefined, process.stdout, function(err, data, container){
-//    container.remove();
-//  })
-//});
-//
-//router.post('/reactnativedocscn', async function(){
-//
-//})
-//
-//app.use(router.routes());
-//
-//// Start port listening
-//app.listen(3099);
+  function shouldNotRemove(Id){
+    usage[Id] = (usage[Id]||0)+1;
+  }
+
+  function release(Id){
+    --usage[Id];
+  }
+
+  // Clear expired containers.
+  const containers = await asyncFn(cb=>docker.listContainers({all:1}, cb));
+  for (let i = 0; i < containers.length; i++){
+
+    const info = containers[i];
+    const container = docker.getContainer(info.Id);
+    const stats = await asyncFn(cb=>container.inspect(cb));
+
+    const finishedAt = new Date(stats.State.FinishedAt);
+    const createdAt = new Date(stats.Created);
+    const lastUpdateTime = finishedAt > createdAt ? finishedAt : createdAt;
+
+    if (!stats.State.Running && Date.now() - lastUpdateTime.getTime() > 30*60*1000) {
+      console.log(stats.Name+'('+stats.Id+') outdated');
+      await asyncFn(cb=>container.remove(cb));
+    } else {
+      shouldNotRemove(stats.Image);
+    }
+  }
+
+  // Clear unused Images;
+
+  const images = await asyncFn(cb=>docker.listImages({all:1}, cb));
+
+  async function removeImage(Id){
+    if (usage[Id]){
+      return;
+    }
+    const image = docker.getImage(Id);
+    let stats
+
+    // Try to remove image
+    try {
+      stats = await asyncFn(cb=>image.inspect(cb));
+      if (stats.RepoTags.length){
+        // Do not clear image with tag.
+        return;
+      }
+      await asyncFn(cb=>image.remove(cb));
+    } catch(e){
+      console.error(stats);
+      console.error(e.stack || e);
+      return;
+    }
+    console.log(Id, "removed");
+
+    shouldNotRemove(Id);
+    release(stats.Parent);
+    await removeImage(stats.Parent);
+  }
+
+  for (let i = 0; i < images.length; i++){
+    const info = images[i];
+    const image = docker.getImage(info.Id);
+    try {
+      const stats = await asyncFn(cb=>image.inspect(cb));
+      shouldNotRemove(stats.Parent);
+    } catch (e){}
+  }
+  for (let i = 0; i < images.length; i++){
+    await removeImage(images[i].Id);
+  }
+}
+
+//clearExpired().catch(e=>console.error(e.stack || e));
+
+setTimeout(clearExpired, 15*60*1000);
+
+const app = new Koa();
+
+app.use((ctx, next) => {
+  return next()
+    .catch(err => {
+      ctx.body = {
+        message: err.message,
+      };
+      ctx.status = err.status;
+    });
+});
+
+app.use(bodyParser());
+
+const router = new Router();
+
+router.post('/reactnativecn', async (ctx) => {
+  startBuild('test');
+  startBuild('main');
+
+  ctx.body = {ok:1};
+});
+
+router.post('/reactnativedocscn', async (ctx) => {
+  startBuild('docs');
+  ctx.body = {ok:1};
+})
+
+app.use(router.routes());
+
+// Start port listening
+app.listen(3099);
