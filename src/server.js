@@ -76,6 +76,40 @@ const buildConfig = {
         },
       });
     }
+  },
+  "main": {
+    "env": {
+      'TAG': 'reactnativecn',
+      'VERSION': 'latest',
+      'REPO': 'https://github.com/reactnativecn/react-native.cn.git',
+      'BRANCH': 'stable',
+    },
+    "postBuild": async ()=>{
+      await restartService('reactnativecn-1', {
+        Image: 'reactnativecn',
+        ExposedPorts: {
+          '3000/tcp' : {}
+        },
+      }, {
+        PortBindings: {
+          '3000/tcp' : {
+            HostPort: '3001'
+          }
+        },
+      });
+      await restartService('reactnativecn-2', {
+        Image: 'reactnativecn',
+        ExposedPorts: {
+          '3000/tcp' : {}
+        },
+      }, {
+        PortBindings: {
+          '3000/tcp' : {
+            HostPort: '3001'
+          }
+        },
+      });
+    }
   }
 };
 
