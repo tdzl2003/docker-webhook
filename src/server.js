@@ -112,7 +112,7 @@ const buildConfig = {
       'TAG': 'reactnativedocscn',
       'VERSION': 'latest',
       'REPO': 'https://github.com/reactnativecn/react-native-docs-cn.git',
-      'BRANCH': 'stable',
+      'BRANCH': 'master',
     },
     "postBuild": async ()=>{
       await restartService('reactnativedocscn-1', {
