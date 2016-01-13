@@ -220,9 +220,8 @@ async function clearExpired(){
   }
 }
 
-//clearExpired().catch(e=>console.error(e.stack || e));
-
-setTimeout(clearExpired, 15*60*1000);
+clearExpired().catch(e=>console.error(e.stack||e));
+setTimeout(()=>clearExpired().catch(e=>console.error(e.stack||e)), 15*60*1000);
 
 const app = new Koa();
 
