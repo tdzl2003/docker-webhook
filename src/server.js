@@ -146,6 +146,7 @@ async function startBuild(name) {
 }
 
 async function clearExpired(){
+  console.log("Start clearing");
   const usage = {};
 
   function shouldNotRemove(Id){
@@ -255,3 +256,5 @@ app.use(router.routes());
 
 // Start port listening
 app.listen(3099);
+
+console.log("Ready");
