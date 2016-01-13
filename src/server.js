@@ -50,7 +50,7 @@ async function restartService(name, createConfigure, startConfigure){
   //  name: name,
   //}, cb));
 
-  await asyncFn(cb=>newcontainer.start(extraRunConfig, cb));
+  await asyncFn(cb=>newcontainer.start(startConfigure, cb));
   console.log("Start completed.");
 }
 
@@ -93,7 +93,7 @@ const buildConfig = {
       }, {
         PortBindings: {
           '3000/tcp' : {
-            HostPort: '3001'
+            HostPort: '3002'
           }
         },
       });
@@ -105,7 +105,7 @@ const buildConfig = {
       }, {
         PortBindings: {
           '3000/tcp' : {
-            HostPort: '3001'
+            HostPort: '3003'
           }
         },
       });
