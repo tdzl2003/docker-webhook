@@ -76,6 +76,7 @@ const buildConfig = {
   "router": {
     "env": {
       'TAG': 'router',
+      'VERSION': 'latest',
       'REPO': 'https://github.com/reactnativecn/react-native.cn.git',
       'BRANCH': 'router',
     },
