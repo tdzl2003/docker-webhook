@@ -73,28 +73,6 @@ const buildConfig = {
       });
     }
   },
-  "router": {
-    "env": {
-      'TAG': 'router',
-      'VERSION': 'latest',
-      'REPO': 'https://github.com/reactnativecn/react-native.cn.git',
-      'BRANCH': 'router',
-    },
-    "postBuild": async ()=>{
-      await restartService('router', {
-        Image: 'router',
-        ExposedPorts: {
-          '80/tcp' : {}
-        },
-      }, {
-        PortBindings: {
-          '80/tcp' : [{
-            HostPort: '80'
-          }]
-        },
-      });
-    }
-  },
   "main": {
     "env": {
       'TAG': 'reactnativecn',
@@ -329,13 +307,12 @@ const router = new Router();
 const reactnativecntasks = {
   'refs/heads/master': 'test',
   'refs/heads/stable': 'main',
-  'refs/heads/router': 'router',
 };
 
 router.post('/reactnativecn', async (ctx) => {
   const task = reactnativecntasks[ctx.request.body.ref];
 
-  setTimeout(() => {
+  task && setTimeout(() => {
     startBuild(task);
   }, 100);
 
