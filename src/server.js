@@ -233,10 +233,15 @@ async function clearExpired(){
     const createdAt = new Date(stats.Created);
     const lastUpdateTime = finishedAt > createdAt ? finishedAt : createdAt;
 
-    if (!stats.State.Running && Date.now() - lastUpdateTime.getTime() > 30*60*1000) {
-      console.log(stats.Name+'('+stats.Id+') outdated');
-      await asyncFn(cb=>container.remove(cb));
-    } else {
+    try {
+      if (!stats.State.Running && Date.now() - lastUpdateTime.getTime() > 30*60*1000) {
+        console.log(stats.Name+'('+stats.Id+') outdated');
+        await asyncFn(cb=>container.remove(cb));
+      } else {
+        shouldNotRemove(stats.Image);
+      }
+    } catch (err) {
+      console.error(err);
       shouldNotRemove(stats.Image);
     }
   }
