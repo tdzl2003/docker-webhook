@@ -70,7 +70,7 @@ const buildConfig = {
             HostPort: '3001'
           }]
         },
-        ExtraHosts: ["reactnative.cn:192.168.2.1"],
+        ExtraHosts: ['reactnative.cn:192.168.2.1', 'bbs.reactnative.cn:192.168.2.1'],
       });
     }
   },
@@ -93,7 +93,7 @@ const buildConfig = {
             HostPort: '3002'
           }],
         },
-        ExtraHosts: ["reactnative.cn:192.168.2.1"],
+        ExtraHosts: ['reactnative.cn:192.168.2.1', 'bbs.reactnative.cn:192.168.2.1'],
       });
       await restartService('reactnativecn-2', {
         Image: 'reactnativecn',
@@ -106,7 +106,7 @@ const buildConfig = {
             HostPort: '3003'
           }]
         },
-        ExtraHosts: ["reactnative.cn:192.168.2.1"],
+        ExtraHosts: ['reactnative.cn:192.168.2.1', 'bbs.reactnative.cn:192.168.2.1'],
       });
     }
   },
